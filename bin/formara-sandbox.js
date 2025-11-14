@@ -54,12 +54,29 @@ switch (command) {
       }
     });
     
-    // TODO: Iniciar frontend shell cuando esté implementado
-    console.log('');
-    console.log('✓ Backend running');
-    console.log('ℹ Frontend shell coming soon...');
-    console.log('');
-    console.log('Press Ctrl+C to stop');
+    // Esperar 2 segundos para que el backend arranque
+    setTimeout(() => {
+      console.log('');
+      console.log('✓ Backend running on http://localhost:3001');
+      console.log('Starting frontend shell...');
+      console.log('');
+      
+      // Ejecutar frontend shell con vite
+      const shellPath = path.join(sdkPath, 'dev', 'sandbox-shell');
+      const frontend = spawn('npm', ['run', 'dev'], {
+        cwd: shellPath,
+        stdio: 'inherit',
+        env: { ...process.env, NODE_ENV: 'development' }
+      });
+      
+      frontend.on('error', (err) => {
+        console.error('❌ Error starting frontend:', err.message);
+      });
+      
+      console.log('✓ Frontend will be available at http://localhost:5174');
+      console.log('');
+      console.log('Press Ctrl+C to stop both servers');
+    }, 2000);
     
     break;
     
@@ -76,7 +93,20 @@ switch (command) {
     break;
     
   case 'frontend':
-    console.log('Frontend shell coming soon...');
+    console.log('Starting frontend shell...');
+    const sdkPathFrontend = path.join(pluginDir, 'node_modules', '@formara', 'plugin-sdk');
+    const shellPathFrontend = path.join(sdkPathFrontend, 'dev', 'sandbox-shell');
+    
+    if (!fs.existsSync(shellPathFrontend)) {
+      console.error('❌ Sandbox shell not found');
+      process.exit(1);
+    }
+    
+    const frontendOnly = spawn('npm', ['run', 'dev'], {
+      cwd: shellPathFrontend,
+      stdio: 'inherit',
+      env: { ...process.env, NODE_ENV: 'development' }
+    });
     break;
     
   default:
