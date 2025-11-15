@@ -2,7 +2,7 @@
  * Sandbox Server para desarrollo de plugins
  * 
  * Express server mock que monta las rutas del plugin
- * Provee mocks de auth, prisma y otros servicios
+ * NO instancia Prisma directamente (las rutas usan el SDK que tiene mocks o DB configurada)
  */
 
 import express from 'express';

@@ -95,7 +95,12 @@ router.get('/cache/:key', async (req, res) => {
 
 ### En Sandbox Standalone
 
-El plugin necesita configurar DATABASE_URL:
+**Opción A: Sin base de datos (solo testing de capabilities)**
+
+El sandbox funciona sin DATABASE_URL. Las rutas que necesiten DB lanzarán error descriptivo.
+Útil para ver field types, actions, hooks sin ejecutar lógica real.
+
+**Opción B: Con base de datos local**
 
 ```bash
 # .env
@@ -105,9 +110,18 @@ DATABASE_URL="postgresql://user:pass@localhost:5433/formara_plugin_dev"
 Ejecutar migrations:
 ```bash
 docker-compose up -d  # PostgreSQL
-npx prisma db push --schema backend/prisma/schema.prisma
-# O ejecutar manualmente los archivos .sql
+# Ejecutar manualmente los archivos .sql
+psql $DATABASE_URL -f backend/migrations/001_xxx.sql
 ```
+
+**Opción C: Usar DB del core (recomendada para testing completo)**
+
+```bash
+# .env
+DATABASE_URL="postgresql://formara:password@localhost:5432/formara?schema=public"
+```
+
+Las migrations ya estarán aplicadas si el core las ejecutó.
 
 ### En Integración con Core
 

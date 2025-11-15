@@ -63,6 +63,22 @@ switch (command) {
       
       // Ejecutar frontend shell con vite
       const shellPath = path.join(sdkPath, 'dev', 'sandbox-shell');
+      
+      // Verificar si sandbox-shell tiene node_modules
+      const shellNodeModules = path.join(shellPath, 'node_modules');
+      if (!fs.existsSync(shellNodeModules)) {
+        console.log('📦 Installing sandbox shell dependencies (first time only)...');
+        const install = require('child_process').spawnSync('npm', ['install'], {
+          cwd: shellPath,
+          stdio: 'inherit'
+        });
+        
+        if (install.status !== 0) {
+          console.error('❌ Failed to install sandbox shell dependencies');
+          process.exit(1);
+        }
+      }
+      
       const frontend = spawn('npm', ['run', 'dev'], {
         cwd: shellPath,
         stdio: 'inherit',
@@ -100,6 +116,21 @@ switch (command) {
     if (!fs.existsSync(shellPathFrontend)) {
       console.error('❌ Sandbox shell not found');
       process.exit(1);
+    }
+    
+    // Verificar e instalar dependencias si es necesario
+    const shellNodeModulesFrontend = path.join(shellPathFrontend, 'node_modules');
+    if (!fs.existsSync(shellNodeModulesFrontend)) {
+      console.log('📦 Installing sandbox shell dependencies...');
+      const install = require('child_process').spawnSync('npm', ['install'], {
+        cwd: shellPathFrontend,
+        stdio: 'inherit'
+      });
+      
+      if (install.status !== 0) {
+        console.error('❌ Failed to install sandbox shell dependencies');
+        process.exit(1);
+      }
     }
     
     const frontendOnly = spawn('npm', ['run', 'dev'], {
