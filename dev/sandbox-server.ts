@@ -75,6 +75,32 @@ export async function startSandboxServer(pluginDir: string) {
     });
   });
   
+  // Endpoint para ejecutar actions del plugin (para testing en sandbox)
+  app.post('/sandbox/execute-action/:actionId', async (req, res) => {
+    try {
+      const { actionId } = req.params;
+      const contextData = req.body;
+      
+      console.log(`[Sandbox] Ejecutando action: ${actionId}`);
+      console.log(`[Sandbox] Context data:`, JSON.stringify(contextData, null, 2));
+      
+      // TODO: Implementar ejecución real de actions
+      // Por ahora, devolver respuesta mock
+      res.json({
+        success: true,
+        message: `Action "${actionId}" ejecutada en modo sandbox`,
+        actionId,
+        contextReceived: contextData.context || 'unknown',
+        warning: 'Ejecución simulada - implementar handler real del plugin'
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Error ejecutando action'
+      });
+    }
+  });
+  
   // Ruta de health check
   app.get('/health', (req, res) => {
     res.json({ 
