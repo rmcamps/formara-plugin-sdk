@@ -11,12 +11,12 @@ const fs = require('fs');
 const command = process.argv[2] || 'start';
 const pluginDir = process.cwd();
 
-// Verificar que estamos en un directorio de plugin
-const configPath = path.join(pluginDir, 'dev', 'sandbox.config.js');
-if (!fs.existsSync(configPath)) {
-  console.error('❌ Error: sandbox.config.js not found');
+// Verificar que estamos en un directorio de plugin (debe tener manifest.json)
+const manifestPath = path.join(pluginDir, 'manifest.json');
+if (!fs.existsSync(manifestPath)) {
+  console.error('❌ Error: manifest.json not found');
   console.error('Are you running this from a plugin directory?');
-  console.error(`Expected: ${configPath}`);
+  console.error(`Expected: ${manifestPath}`);
   process.exit(1);
 }
 
@@ -36,8 +36,8 @@ switch (command) {
       process.exit(1);
     }
     
-    // Ejecutar backend con ts-node
-    const backend = spawn('npx', ['ts-node', serverScript, configPath], {
+    // Ejecutar backend con ts-node, pasando el directorio del plugin
+    const backend = spawn('npx', ['ts-node', serverScript, pluginDir], {
       cwd: pluginDir,
       stdio: 'inherit',
       env: { ...process.env, NODE_ENV: 'development' }
@@ -85,7 +85,7 @@ switch (command) {
     const sdkPathBackend = path.join(pluginDir, 'node_modules', '@formara', 'plugin-sdk');
     const serverScriptBackend = path.join(sdkPathBackend, 'dev', 'sandbox-server.ts');
     
-    const backendOnly = spawn('npx', ['ts-node', serverScriptBackend, configPath], {
+    const backendOnly = spawn('npx', ['ts-node', serverScriptBackend, pluginDir], {
       cwd: pluginDir,
       stdio: 'inherit',
       env: { ...process.env, NODE_ENV: 'development' }

@@ -6,10 +6,11 @@
 import React, { useState } from 'react';
 
 interface APITestTabProps {
-  pluginName: string;
+  pluginInfo: any;
 }
 
-export default function APITestTab({ pluginName }: APITestTabProps) {
+export default function APITestTab({ pluginInfo }: APITestTabProps) {
+  const pluginName = pluginInfo.name;
   const [method, setMethod] = useState<'GET' | 'POST' | 'PUT' | 'DELETE'>('GET');
   const [endpoint, setEndpoint] = useState(`/api/plugins/${pluginName}/config`);
   const [body, setBody] = useState('{\n  "workspaceId": 1\n}');

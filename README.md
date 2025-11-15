@@ -95,3 +95,4 @@ En producción (integrado con core):
 - Plugin funciona sin cambios
 - Sin overhead (resolución en compile time)
 
+

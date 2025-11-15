@@ -6,10 +6,11 @@
 import React, { useEffect, useState } from 'react';
 
 interface ConfigurationTabProps {
-  pluginName: string;
+  pluginInfo: any;
 }
 
-export default function ConfigurationTab({ pluginName }: ConfigurationTabProps) {
+export default function ConfigurationTab({ pluginInfo }: ConfigurationTabProps) {
+  const pluginName = pluginInfo.name;
   const [ConfigComponent, setConfigComponent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -81,4 +82,5 @@ export default function MiConfig({ workspaceId }) {
     </div>
   );
 }
+
 

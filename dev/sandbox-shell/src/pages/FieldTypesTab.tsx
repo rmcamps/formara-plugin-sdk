@@ -6,16 +6,17 @@
 import React, { useState } from 'react';
 
 interface FieldTypesTabProps {
-  pluginName: string;
+  pluginInfo: any;
 }
 
-export default function FieldTypesTab({ pluginName }: FieldTypesTabProps) {
+export default function FieldTypesTab({ pluginInfo }: FieldTypesTabProps) {
   const [selectedType, setSelectedType] = useState<string>('');
   const [testValue, setTestValue] = useState<string>('');
   const [validationResult, setValidationResult] = useState<any>(null);
 
-  // TODO: Cargar field types del plugin desde sandbox.config.js
-  const fieldTypes: any[] = [];
+  // Cargar field types desde el manifest del plugin
+  const fieldTypes: any[] = pluginInfo.fieldTypes || [];
+  const pluginName = pluginInfo.name;
 
   if (fieldTypes.length === 0) {
     return (
@@ -28,8 +29,8 @@ export default function FieldTypesTab({ pluginName }: FieldTypesTabProps) {
           
           <div className="bg-yellow-50 border border-yellow-200 rounded p-4 mb-4">
             <p className="text-sm text-yellow-800">
-              ℹ️ Tu plugin no define field types custom. Este tab se habilita automáticamente
-              cuando exportas field types en <code>frontend/index.ts</code>
+              ℹ️ Tu plugin no define field types custom. Los field types se detectan automáticamente
+              desde <code>manifest.json</code> bajo <code>capabilities.fieldTypes</code>
             </p>
           </div>
 
@@ -170,4 +171,5 @@ export default CUITFieldType;`}
 }
 
 export default FieldTypesTab;
+
 

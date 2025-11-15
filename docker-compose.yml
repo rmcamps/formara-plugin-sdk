@@ -21,3 +21,4 @@ services:
 volumes:
   plugin_postgres_data:
 
+

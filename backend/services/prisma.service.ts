@@ -23,3 +23,4 @@ export { PrismaClient };
 // Export como default para compatibilidad
 export default sharedPrisma;
 
+

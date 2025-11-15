@@ -160,3 +160,4 @@ No necesitas cambios para deploy. El core automáticamente:
 - Ver `INTEGRATION_WITH_CORE.md` para entender la arquitectura
 - Ver `examples/` para plugins de ejemplo
 
+

@@ -7,17 +7,38 @@
 import React, { useState } from 'react';
 import ConfigurationTab from './pages/ConfigurationTab';
 import FieldTypesTab from './pages/FieldTypesTab';
+import ActionsTab from './pages/ActionsTab';
+import HooksTab from './pages/HooksTab';
 import APITestTab from './pages/APITestTab';
 import './App.css';
 
-type Tab = 'config' | 'fieldtypes' | 'api';
+type Tab = 'config' | 'fieldtypes' | 'actions' | 'hooks' | 'api';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('config');
+  const [pluginInfo, setPluginInfo] = useState<any>(null);
   
-  // TODO: Cargar plugin config desde sandbox.config.js
-  const pluginName = 'mi-plugin';
-  const pluginDisplayName = 'Mi Plugin';
+  // Cargar configuración del plugin desde el backend sandbox
+  React.useEffect(() => {
+    fetch('http://localhost:3001/sandbox/plugin-info')
+      .then(r => r.json())
+      .then(setPluginInfo)
+      .catch(err => console.error('Error loading plugin info:', err));
+  }, []);
+  
+  if (!pluginInfo) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <p className="text-gray-600 mb-2">Cargando información del plugin...</p>
+          <p className="text-sm text-gray-500">Asegúrate que el backend esté corriendo en :3001</p>
+        </div>
+      </div>
+    );
+  }
+  
+  const pluginName = pluginInfo.name;
+  const pluginDisplayName = pluginInfo.displayName || pluginInfo.name;
 
   return (
     <div className="sandbox-shell">
@@ -45,6 +66,33 @@ function App() {
           onClick={() => setActiveTab('fieldtypes')}
         >
           🎨 Field Types
+          {pluginInfo.fieldTypes?.length > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs">
+              {pluginInfo.fieldTypes.length}
+            </span>
+          )}
+        </button>
+        <button
+          className={`tab ${activeTab === 'actions' ? 'active' : ''}`}
+          onClick={() => setActiveTab('actions')}
+        >
+          ⚡ Actions
+          {pluginInfo.actions?.length > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-xs">
+              {pluginInfo.actions.length}
+            </span>
+          )}
+        </button>
+        <button
+          className={`tab ${activeTab === 'hooks' ? 'active' : ''}`}
+          onClick={() => setActiveTab('hooks')}
+        >
+          🪝 Hooks
+          {pluginInfo.hooks?.length > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
+              {pluginInfo.hooks.length}
+            </span>
+          )}
         </button>
         <button
           className={`tab ${activeTab === 'api' ? 'active' : ''}`}
@@ -56,9 +104,11 @@ function App() {
 
       {/* Content */}
       <main className="content">
-        {activeTab === 'config' && <ConfigurationTab pluginName={pluginName} />}
-        {activeTab === 'fieldtypes' && <FieldTypesTab pluginName={pluginName} />}
-        {activeTab === 'api' && <APITestTab pluginName={pluginName} />}
+        {activeTab === 'config' && <ConfigurationTab pluginInfo={pluginInfo} />}
+        {activeTab === 'fieldtypes' && <FieldTypesTab pluginInfo={pluginInfo} />}
+        {activeTab === 'actions' && <ActionsTab pluginInfo={pluginInfo} />}
+        {activeTab === 'hooks' && <HooksTab pluginInfo={pluginInfo} />}
+        {activeTab === 'api' && <APITestTab pluginInfo={pluginInfo} />}
       </main>
 
       {/* Footer */}
@@ -70,4 +120,5 @@ function App() {
 }
 
 export default App;
+
 

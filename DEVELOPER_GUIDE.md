@@ -177,3 +177,4 @@ git push origin main
 
 Formara Core lo integrará automáticamente usando los shims, sin necesidad de cambios en el código.
 
+
