@@ -15,8 +15,8 @@
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true
   },
-  "include": ["backend/**/*", "frontend/**/*", "dev/**/*"],
-  "exclude": ["node_modules", "dist", "dev/sandbox-shell/node_modules"]
+  "include": ["backend/**/*", "frontend/**/*", "dev/sandbox-server.ts"],
+  "exclude": ["node_modules", "dist", "dev/sandbox-shell"]
 }
 
 

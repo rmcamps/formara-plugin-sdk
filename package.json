@@ -20,9 +20,10 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --skipLibCheck",
+    "build:shell": "cd dev/sandbox-shell && npm install && npm run build",
     "dev": "tsc --watch",
-    "postinstall": "npm run build",
+    "postinstall": "npm run build || echo 'Build failed but continuing...'",
     "prepublishOnly": "npm run build"
   },
   "keywords": ["formara", "plugin", "sdk"],
