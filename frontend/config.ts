@@ -24,7 +24,9 @@ function resolveApiBase(): string {
   }
   
   // Fallback a variable de entorno o localhost
+  // @ts-ignore - import.meta.env existe en contexto de Vite
   if (typeof import.meta !== 'undefined' && import.meta.env) {
+    // @ts-ignore
     return (import.meta.env.VITE_API_URL as string) || 'http://localhost:3000';
   }
   

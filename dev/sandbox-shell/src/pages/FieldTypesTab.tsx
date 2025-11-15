@@ -170,6 +170,4 @@ export default CUITFieldType;`}
   );
 }
 
-export default FieldTypesTab;
-
 
