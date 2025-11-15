@@ -38,6 +38,19 @@ export async function startSandboxServer(pluginDir: string) {
     routes = require(backendRoutesPathJS).default || require(backendRoutesPathJS);
   }
   
+  // Auto-descubrir actions del backend
+  const backendActionsPath = path.join(pluginDir, 'backend', 'actions.ts');
+  const backendActionsPathJS = path.join(pluginDir, 'backend', 'actions.js');
+  
+  let pluginActions: any[] = [];
+  if (fs.existsSync(backendActionsPath)) {
+    const actionsModule = require(backendActionsPath);
+    pluginActions = actionsModule.actions || actionsModule.default || [];
+  } else if (fs.existsSync(backendActionsPathJS)) {
+    const actionsModule = require(backendActionsPathJS);
+    pluginActions = actionsModule.actions || actionsModule.default || [];
+  }
+  
   const pluginName = manifest.name;
   const pluginDisplayName = manifest.displayName || manifest.name;
   
@@ -84,19 +97,43 @@ export async function startSandboxServer(pluginDir: string) {
       console.log(`[Sandbox] Ejecutando action: ${actionId}`);
       console.log(`[Sandbox] Context data:`, JSON.stringify(contextData, null, 2));
       
-      // TODO: Implementar ejecución real de actions
-      // Por ahora, devolver respuesta mock
-      res.json({
-        success: true,
-        message: `Action "${actionId}" ejecutada en modo sandbox`,
-        actionId,
-        contextReceived: contextData.context || 'unknown',
-        warning: 'Ejecución simulada - implementar handler real del plugin'
-      });
+      // Buscar la action en las actions del plugin
+      const action = pluginActions.find((a: any) => a.id === actionId);
+      
+      if (!action) {
+        return res.status(404).json({
+          success: false,
+          error: `Action "${actionId}" no encontrada`,
+          availableActions: pluginActions.map((a: any) => a.id)
+        });
+      }
+      
+      // Ejecutar el handler real de la action
+      if (typeof action.handler === 'function') {
+        console.log(`[Sandbox] ▶️  Ejecutando handler real de: ${action.label}`);
+        
+        const result = await action.handler(contextData);
+        
+        console.log(`[Sandbox] ${result.success ? '✅' : '❌'} Resultado:`, result.message);
+        
+        res.json(result);
+      } else {
+        // Si no tiene handler, devolver mock
+        res.json({
+          success: true,
+          message: `Action "${action.label}" ejecutada (sin handler real definido)`,
+          actionId,
+          contextReceived: contextData.context || 'unknown',
+          warning: 'Action sin handler - define handler en backend/actions.ts'
+        });
+      }
     } catch (error: any) {
+      console.error(`[Sandbox] ❌ Error ejecutando action:`, error);
       res.status(500).json({
         success: false,
-        error: error.message || 'Error ejecutando action'
+        message: 'Error ejecutando action',
+        error: error.message || 'Error desconocido',
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
       });
     }
   });
