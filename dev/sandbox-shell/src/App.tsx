@@ -9,10 +9,11 @@ import ConfigurationTab from './pages/ConfigurationTab';
 import FieldTypesTab from './pages/FieldTypesTab';
 import ActionsTab from './pages/ActionsTab';
 import HooksTab from './pages/HooksTab';
+import IntegrationsTab from './pages/IntegrationsTab';
 import APITestTab from './pages/APITestTab';
 import './App.css';
 
-type Tab = 'config' | 'fieldtypes' | 'actions' | 'hooks' | 'api';
+type Tab = 'config' | 'fieldtypes' | 'actions' | 'hooks' | 'integrations' | 'api';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('config');
@@ -95,6 +96,17 @@ function App() {
           )}
         </button>
         <button
+          className={`tab ${activeTab === 'integrations' ? 'active' : ''}`}
+          onClick={() => setActiveTab('integrations')}
+        >
+          🔗 Integrations
+          {pluginInfo.integrations?.length > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
+              {pluginInfo.integrations.length}
+            </span>
+          )}
+        </button>
+        <button
           className={`tab ${activeTab === 'api' ? 'active' : ''}`}
           onClick={() => setActiveTab('api')}
         >
@@ -108,6 +120,7 @@ function App() {
         {activeTab === 'fieldtypes' && <FieldTypesTab pluginInfo={pluginInfo} />}
         {activeTab === 'actions' && <ActionsTab pluginInfo={pluginInfo} />}
         {activeTab === 'hooks' && <HooksTab pluginInfo={pluginInfo} />}
+        {activeTab === 'integrations' && <IntegrationsTab pluginInfo={pluginInfo} />}
         {activeTab === 'api' && <APITestTab pluginInfo={pluginInfo} />}
       </main>
 

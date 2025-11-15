@@ -51,6 +51,19 @@ export async function startSandboxServer(pluginDir: string) {
     pluginActions = actionsModule.actions || actionsModule.default || [];
   }
   
+  // Auto-descubrir hooks del backend
+  const backendHooksPath = path.join(pluginDir, 'backend', 'hooks.ts');
+  const backendHooksPathJS = path.join(pluginDir, 'backend', 'hooks.js');
+  
+  let pluginHooks: any[] = [];
+  if (fs.existsSync(backendHooksPath)) {
+    const hooksModule = require(backendHooksPath);
+    pluginHooks = hooksModule.hooks || hooksModule.default || [];
+  } else if (fs.existsSync(backendHooksPathJS)) {
+    const hooksModule = require(backendHooksPathJS);
+    pluginHooks = hooksModule.hooks || hooksModule.default || [];
+  }
+  
   const pluginName = manifest.name;
   const pluginDisplayName = manifest.displayName || manifest.name;
   
@@ -132,6 +145,67 @@ export async function startSandboxServer(pluginDir: string) {
       res.status(500).json({
         success: false,
         message: 'Error ejecutando action',
+        error: error.message || 'Error desconocido',
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    }
+  });
+  
+  // Endpoint para disparar hooks del plugin (para testing en sandbox)
+  app.post('/sandbox/dispatch-hook/:hookId', async (req, res) => {
+    try {
+      const { hookId } = req.params;
+      const eventData = req.body;
+      
+      console.log(`[Sandbox] Disparando hook: ${hookId}`);
+      console.log(`[Sandbox] Event:`, eventData.event);
+      
+      // Buscar el hook en los hooks del plugin
+      const hook = pluginHooks.find((h: any) => h.id === hookId);
+      
+      if (!hook) {
+        return res.status(404).json({
+          success: false,
+          error: `Hook "${hookId}" no encontrado`,
+          availableHooks: pluginHooks.map((h: any) => h.id)
+        });
+      }
+      
+      // Verificar que el evento coincida
+      if (hook.event && eventData.event && hook.event !== eventData.event) {
+        console.warn(`[Sandbox] ⚠️  Evento no coincide: hook espera "${hook.event}", recibió "${eventData.event}"`);
+      }
+      
+      // Ejecutar el handler real del hook
+      if (typeof hook.handler === 'function') {
+        console.log(`[Sandbox] ▶️  Ejecutando handler real del hook: ${hook.id}`);
+        
+        const result = await hook.handler(eventData.data || eventData);
+        
+        console.log(`[Sandbox] ${result?.success !== false ? '✅' : '❌'} Hook ejecutado`);
+        
+        res.json({
+          success: result?.success !== false,
+          message: result?.message || `Hook "${hook.id}" ejecutado`,
+          hookId,
+          event: eventData.event,
+          data: result?.data,
+          executionTime: result?.executionTime
+        });
+      } else {
+        res.json({
+          success: true,
+          message: `Hook "${hook.id}" registrado (sin handler en sandbox)`,
+          hookId,
+          event: eventData.event,
+          warning: 'Hook sin handler disponible en sandbox'
+        });
+      }
+    } catch (error: any) {
+      console.error(`[Sandbox] ❌ Error disparando hook:`, error);
+      res.status(500).json({
+        success: false,
+        message: 'Error disparando hook',
         error: error.message || 'Error desconocido',
         stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
       });
