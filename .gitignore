@@ -5,8 +5,8 @@ yarn.lock
 pnpm-lock.yaml
 
 # Build outputs
-dist/
-build/
+# dist/ - NO ignorar, necesario para git dependency
+# build/
 *.tsbuildinfo
 
 # Environment variables

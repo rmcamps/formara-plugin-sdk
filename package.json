@@ -16,6 +16,7 @@
     ".": "./dist/index.js",
     "./ui": "./dist/ui/index.js",
     "./utils/vite-config": "./dist/utils/vite-config.js",
+    "./utils/tailwind-config": "./dist/utils/tailwind-config.js",
     "./sandbox/frontend": "./dist/sandbox/frontend/DevApp.js",
     "./sandbox/frontend/mockup-loader": "./dist/sandbox/frontend/mockup-loader.js",
     "./sandbox/frontend/auth-adapter": "./dist/sandbox/frontend/auth-adapter.js",
@@ -23,15 +24,17 @@
     "./sandbox/backend/dev-server": "./dist/sandbox/backend/dev-server.js",
     "./sandbox/backend/prisma-adapter": "./dist/sandbox/backend/prisma-adapter.js",
     "./contracts/frontend": "./dist/contracts/frontend/index.js",
-    "./contracts/backend": "./dist/contracts/backend/index.js"
+    "./contracts/backend": "./dist/contracts/backend/index.js",
+    "./sdk-styles.css": "./dist/sdk-styles.css"
   },
   "files": [
     "dist",
     "src"
   ],
   "scripts": {
-    "build": "tsc && npm run copy-contracts",
+    "build": "tsc && npm run copy-contracts && npm run build:tailwind",
     "copy-contracts": "node scripts/copy-contracts.mjs",
+    "build:tailwind": "node scripts/build-tailwind.mjs",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -61,7 +64,10 @@
     "@types/express": "^4.17.21",
     "@types/cors": "^2.8.17",
     "typescript": "^5.0.0",
-    "vite": "^6.0.0"
+    "vite": "^6.0.0",
+    "@tailwindcss/cli": "^4.1.17",
+    "@tailwindcss/postcss": "^4.1.17",
+    "tailwindcss": "^4.1.13"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

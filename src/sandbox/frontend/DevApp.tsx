@@ -103,8 +103,14 @@ export interface DevAppProps {
   fieldTypes?: any[];
   /** Actions del plugin (del manifest) */
   actions?: any[];
-  /** Integrations del plugin (array de integration objects) */
-  integrations?: any[];
+  /** Hooks del plugin (del manifest) */
+  hooks?: any[];
+  /** Schemas del plugin (formularios) */
+  schemas?: any[];
+  /** Templates del plugin (documentos) */
+  templates?: any[];
+  /** Cards del plugin (array de card objects con location) */
+  cards?: any[];
   /** Mockups para testing de actions (opcional, si no se proporciona se intenta cargar automáticamente) */
   mockups?: Record<string, { label: string; data: any }>;
   /** URL del backend del plugin */
@@ -130,8 +136,8 @@ export interface DevAppProps {
   };
   /** Mapeo de action.id a endpoint del backend (opcional, usa convención por defecto) */
   actionEndpoints?: Record<string, { method: string; path: string }>;
-  /** Componentes de configuración de integrations (opcional) */
-  integrationComponents?: Record<string, React.ComponentType<any>>;
+  /** Componentes de configuración de cards (opcional) */
+  cardComponents?: Record<string, React.ComponentType<any>>;
 }
 
 export function DevApp({
@@ -141,12 +147,15 @@ export function DevApp({
   description = '',
   fieldTypes = [],
   actions = [],
-  integrations = [],
+  hooks = [],
+  schemas = [],
+  templates = [],
+  cards = [],
   mockups: providedMockups = {},
   backendUrl = 'http://localhost:4001',
   uiComponents = {},
   actionEndpoints,
-  integrationComponents: providedIntegrationComponents = {},
+  cardComponents: providedCardComponents = {},
 }: DevAppProps) {
   // Configurar backendUrl globalmente para que api-adapter lo use
   useEffect(() => {
@@ -173,21 +182,28 @@ export function DevApp({
   //                     const mockups = loadMockups(); // Luego pasar a DevApp
   const mockups = providedMockups;
   
-  // Extraer automáticamente componentes de configuración de las integraciones
-  // Si una integración tiene configComponent, se extrae automáticamente
-  // Esto permite pasar integrations directamente sin tener que mapear manualmente
-  const autoExtractedComponents = integrations.reduce((acc, integration: any) => {
-    if (integration.configComponent) {
-      acc[integration.id] = integration.configComponent;
+  // Agrupar cards por location
+  const cardsByLocation = {
+    generate: (cards || []).filter((c: any) => c && c.location === 'generate'),
+    distribute: (cards || []).filter((c: any) => c && c.location === 'distribute'),
+    automations: (cards || []).filter((c: any) => c && c.location === 'automations'),
+    integrations: (cards || []).filter((c: any) => c && c.location === 'integrations'),
+  };
+  
+  // Extraer automáticamente componentes de configuración de las cards
+  // Si una card tiene configComponent, se extrae automáticamente
+  const autoExtractedCardComponents = cards.reduce((acc, card: any) => {
+    if (card.configComponent) {
+      acc[card.id] = card.configComponent;
     }
     return acc;
   }, {} as Record<string, React.ComponentType<any>>);
   
   // Combinar componentes extraídos automáticamente con los proporcionados explícitamente
   // Los proporcionados explícitamente tienen prioridad (override)
-  const integrationComponents = {
-    ...autoExtractedComponents,
-    ...providedIntegrationComponents,
+  const cardComponents = {
+    ...autoExtractedCardComponents,
+    ...providedCardComponents,
   };
   
   // Estado interno para actions (si se cargan automáticamente)
@@ -195,9 +211,13 @@ export function DevApp({
   const [loadingActions, setLoadingActions] = useState(false);
   
   const [selectedTab, setSelectedTab] = useState('field-types');
+  const [selectedCardSection, setSelectedCardSection] = useState<string>('resumen');
   const [selectedFieldType, setSelectedFieldType] = useState<string | null>(null);
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
-  const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
+  const [selectedHook, setSelectedHook] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [selectedCard, setSelectedCard] = useState<string | null>(null);
+  const [selectedCardLocation, setSelectedCardLocation] = useState<string | null>(null);
   const [selectedMockup, setSelectedMockup] = useState<string | null>(null);
   const [customJson, setCustomJson] = useState<string>('');
   const [customJsonError, setCustomJsonError] = useState<string | null>(null);
@@ -205,8 +225,8 @@ export function DevApp({
   const [fieldValue, setFieldValue] = useState<any>('');
   const [validationResult, setValidationResult] = useState<any>(null);
   const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
-  const [integrationModalOpen, setIntegrationModalOpen] = useState(false);
-  const [integrationSubView, setIntegrationSubView] = useState<string | null>(null);
+  const [cardModalOpen, setCardModalOpen] = useState(false);
+  const [cardSubView, setCardSubView] = useState<string | null>(null);
   const { isDark, toggleTheme } = useTheme();
 
   // Actualizar título del documento
@@ -292,6 +312,34 @@ export function DevApp({
       setSelectedMockup(firstMockupKey);
     }
   }, [selectedAction, mockups]);
+
+  // Seleccionar automáticamente RESUMEN cuando no hay selección en Field Types
+  useEffect(() => {
+    if (selectedTab === 'field-types' && selectedFieldType === null) {
+      setSelectedFieldType('__RESUMEN_FIELD_TYPES__');
+    }
+  }, [selectedTab, selectedFieldType]);
+
+  // Seleccionar automáticamente RESUMEN cuando no hay selección en Actions
+  useEffect(() => {
+    if (selectedTab === 'actions' && selectedAction === null) {
+      setSelectedAction('__RESUMEN_ACTIONS__');
+    }
+  }, [selectedTab, selectedAction]);
+
+  // Seleccionar automáticamente RESUMEN cuando no hay selección en Hooks
+  useEffect(() => {
+    if (selectedTab === 'hooks' && selectedHook === null) {
+      setSelectedHook('__RESUMEN_HOOKS__');
+    }
+  }, [selectedTab, selectedHook]);
+
+  // Seleccionar automáticamente RESUMEN cuando no hay selección en Templates
+  useEffect(() => {
+    if (selectedTab === 'templates' && selectedTemplate === null) {
+      setSelectedTemplate('__RESUMEN_TEMPLATES__');
+    }
+  }, [selectedTab, selectedTemplate]);
   
   // Log para debugging (solo en desarrollo)
   useEffect(() => {
@@ -307,8 +355,15 @@ export function DevApp({
         return renderFieldTypes();
       case 'actions':
         return renderActions();
+      case 'hooks':
+        return renderHooks();
+      case 'templates':
+        return renderTemplates();
+      case 'generate':
+      case 'distribute':
+      case 'automations':
       case 'integrations':
-        // Las integraciones se renderizan directamente en TabsContent
+        // Las cards se renderizan directamente en TabsContent
         return null;
       default:
         return <div>Tab no implementado: {selectedTab}</div>;
@@ -856,8 +911,8 @@ export function DevApp({
     );
   };
 
-  // Integraciones que deben mostrar vista de detalle en lugar de modal
-  const routeIntegrations: Record<string, string> = {
+  // Cards que deben mostrar vista de detalle en lugar de modal
+  const routeCards: Record<string, string> = {
     'afip-facturacion': 'afip-facturacion',
     'embeds': 'embeds',
     'google-sheets': 'google-sheets',
@@ -870,13 +925,226 @@ export function DevApp({
     automation: 'bg-purple-50 dark:bg-purple-900/30',
     communication: 'bg-blue-50 dark:bg-blue-900/30',
     analytics: 'bg-pink-50 dark:bg-pink-900/30',
+    document: 'bg-green-50 dark:bg-green-900/30',
+    email: 'bg-blue-50 dark:bg-blue-900/30',
+    payment: 'bg-yellow-50 dark:bg-yellow-900/30',
+    invoice: 'bg-purple-50 dark:bg-purple-900/30',
+    whatsapp: 'bg-green-50 dark:bg-green-900/30',
+    sms: 'bg-yellow-50 dark:bg-yellow-900/30',
+    signature: 'bg-purple-50 dark:bg-purple-900/30',
+    campaign: 'bg-pink-50 dark:bg-pink-900/30',
     other: 'bg-gray-50 dark:bg-gray-800'
   };
 
-  // Componente Card para integraciones (similar a Formara core)
-  const IntegrationCard = ({ integration, onClick }: { integration: any; onClick: () => void }) => {
-    const color = categoryColors[integration.category || 'other'] || 'bg-gray-50 dark:bg-gray-800';
-    const title = `${integration.icon || '🔌'} ${integration.displayName}`;
+  // Renderizar Hooks
+  const renderHooks = () => {
+    if (!selectedHook) {
+      return (
+        <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+          Seleccioná un Hook del menú lateral
+        </div>
+      );
+    }
+
+    // Mostrar resumen si se selecciona la opción especial
+    if (selectedHook === '__RESUMEN_HOOKS__') {
+      return (
+        <div className="space-y-6 p-6">
+          <div>
+            <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">📚 Resumen: Hooks</h3>
+          </div>
+          <div className="space-y-4 text-gray-700 dark:text-gray-300">
+            <div>
+              <h4 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">¿Qué son los Hooks?</h4>
+              <p className="text-sm">
+                Los Hooks son funciones que se ejecutan automáticamente cuando ocurren eventos específicos en Formara. 
+                Permiten que los plugins reaccionen a eventos del sistema como la creación de documentos, actualización de registros, 
+                procesamiento de archivos, etc.
+              </p>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">¿Para qué sirven?</h4>
+              <ul className="list-disc list-inside text-sm space-y-1 ml-4">
+                <li>Validar datos automáticamente cuando se crean o actualizan registros</li>
+                <li>Procesar archivos automáticamente cuando se suben</li>
+                <li>Ejecutar acciones en respuesta a eventos del sistema</li>
+                <li>Integrar con servicios externos cuando ocurren eventos específicos</li>
+                <li>Modificar o enriquecer datos antes de guardarlos</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">¿Cómo se muestran y usan en Formara?</h4>
+              <p className="text-sm mb-2">
+                Los Hooks se ejecutan automáticamente en segundo plano cuando ocurren los eventos definidos:
+              </p>
+              <ul className="list-disc list-inside text-sm space-y-1 ml-4">
+                <li>Se registran en el manifest del plugin con el evento y prioridad</li>
+                <li>Se ejecutan automáticamente cuando ocurre el evento correspondiente</li>
+                <li>Pueden modificar datos, validar, o disparar acciones adicionales</li>
+                <li>Se ejecutan en el orden de prioridad definido</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">¿Cómo se agregan y programan en el plugin?</h4>
+              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-700">
+                <p className="text-sm font-mono mb-2">1. Definir el hook en el manifest.json:</p>
+                <pre className="text-xs bg-gray-900 dark:bg-gray-950 text-green-400 p-3 rounded overflow-x-auto">
+{`"hooks": [
+  {
+    "id": "mi-hook",
+    "event": "form.record.created",
+    "priority": 50
+  }
+]`}
+                </pre>
+                <p className="text-sm font-mono mt-4 mb-2">2. Implementar el handler en backend/routes.ts:</p>
+                <pre className="text-xs bg-gray-900 dark:bg-gray-950 text-green-400 p-3 rounded overflow-x-auto">
+{`export const hooks = {
+  'mi-hook': async (data) => {
+    // Lógica del hook
+    return { success: true };
+  }
+};`}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const hook = hooks.find((h: any) => h.id === selectedHook);
+    if (!hook) return null;
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">{hook.id}</h3>
+          {hook.event && (
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Evento: {hook.event}</p>
+          )}
+          {hook.priority !== undefined && (
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Prioridad: {hook.priority}</p>
+          )}
+        </div>
+        <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Detalles del hook: {hook.id}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
+  // Renderizar Templates (schemas y templates)
+  const renderTemplates = () => {
+    if (!selectedTemplate) {
+      return (
+        <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+          Seleccioná un Template del menú lateral
+        </div>
+      );
+    }
+
+    // Mostrar resumen si se selecciona la opción especial
+    if (selectedTemplate === '__RESUMEN_TEMPLATES__') {
+      return (
+        <div className="space-y-6 p-6">
+          <div>
+            <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">📚 Resumen: Templates</h3>
+          </div>
+          <div className="space-y-4 text-gray-700 dark:text-gray-300">
+            <div>
+              <h4 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">¿Qué son los Templates?</h4>
+              <p className="text-sm">
+                Los Templates son formularios y documentos predefinidos que los plugins pueden agregar a Formara. 
+                Incluyen schemas (formularios) y templates de documentos que enriquecen las capacidades del sistema.
+              </p>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">¿Para qué sirven?</h4>
+              <ul className="list-disc list-inside text-sm space-y-1 ml-4">
+                <li><strong>Schemas (Formularios):</strong> Agregar formularios predefinidos que los usuarios pueden usar</li>
+                <li><strong>Templates (Documentos):</strong> Agregar plantillas de documentos que se pueden generar</li>
+                <li>Proporcionar estructuras de datos comunes para diferentes casos de uso</li>
+                <li>Facilitar la creación rápida de formularios y documentos especializados</li>
+                <li>Compartir configuraciones estándar entre workspaces</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">¿Cómo se muestran y usan en Formara?</h4>
+              <p className="text-sm mb-2">
+                Los Templates aparecen en las secciones correspondientes de Formara:
+              </p>
+              <ul className="list-disc list-inside text-sm space-y-1 ml-4">
+                <li>Los Schemas aparecen en la sección de Formularios (/forms)</li>
+                <li>Los Templates de documentos aparecen en la sección de Templates (/templates)</li>
+                <li>Los usuarios pueden crear nuevos formularios o documentos basados en estos templates</li>
+                <li>Se pueden personalizar según las necesidades del workspace</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">¿Cómo se agregan y programan en el plugin?</h4>
+              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-700">
+                <p className="text-sm font-mono mb-2">1. Agregar schemas en la carpeta schemas/ del plugin:</p>
+                <pre className="text-xs bg-gray-900 dark:bg-gray-950 text-green-400 p-3 rounded overflow-x-auto">
+{`plugins/mi-plugin/schemas/
+  └── mi-formulario.json`}
+                </pre>
+                <p className="text-sm font-mono mt-4 mb-2">2. Agregar templates en la carpeta templates/ del plugin:</p>
+                <pre className="text-xs bg-gray-900 dark:bg-gray-950 text-green-400 p-3 rounded overflow-x-auto">
+{`plugins/mi-plugin/templates/
+  └── mi-documento.json`}
+                </pre>
+                <p className="text-sm font-mono mt-4 mb-2">3. Referenciarlos en el manifest.json:</p>
+                <pre className="text-xs bg-gray-900 dark:bg-gray-950 text-green-400 p-3 rounded overflow-x-auto">
+{`"capabilities": {
+  "schemas": ["mi-formulario"],
+  "templates": ["mi-documento"]
+}`}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Buscar el template seleccionado (puede ser schema o template)
+    const allTemplates = [
+      ...schemas.map((s: any, i: number) => ({ ...s, id: `schema-${i}`, type: 'schema' })),
+      ...templates.map((t: any, i: number) => ({ ...t, id: `template-${i}`, type: 'template' }))
+    ];
+    const template = allTemplates.find((t: any) => t.id === selectedTemplate);
+    
+    if (!template) return null;
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">
+            {template.name || template.title || (template.type === 'schema' ? 'Schema' : 'Template')}
+          </h3>
+          {template.description && (
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{template.description}</p>
+          )}
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+            Tipo: {template.type === 'schema' ? 'Schema (Formulario)' : 'Template (Documento)'}
+          </p>
+        </div>
+        <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
+          <pre className="text-xs bg-gray-50 dark:bg-gray-900 p-3 rounded overflow-x-auto">
+            {JSON.stringify(template, null, 2)}
+          </pre>
+        </div>
+      </div>
+    );
+  };
+
+  // Componente Card genérico para todas las locations
+  const CardComponent = ({ card, onClick }: { card: any; onClick: () => void }) => {
+    const color = categoryColors[card.category || 'other'] || 'bg-gray-50 dark:bg-gray-800';
+    const title = `${card.icon || '🔌'} ${card.displayName}`;
     const badge = 'No configurado'; // En standalone siempre "No configurado"
 
     return (
@@ -887,8 +1155,8 @@ export function DevApp({
         <div className="text-base font-semibold mb-1 text-gray-900 dark:text-gray-100 flex items-center gap-2">
           {title}
         </div>
-        {integration.description && (
-          <div className="text-xs text-gray-600 dark:text-gray-300 mb-2">{integration.description}</div>
+        {card.description && (
+          <div className="text-xs text-gray-600 dark:text-gray-300 mb-2">{card.description}</div>
         )}
         {badge && (
           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
@@ -899,39 +1167,124 @@ export function DevApp({
     );
   };
 
-  // Renderizar grid de cards de integraciones (igual que Formara core)
-  const renderIntegrationsGrid = () => {
+  // Renderizar resumen para una location de cards
+  const renderCardsSummary = (locationName: string, displayName: string, description: string) => {
+    return (
+      <div className="space-y-6 p-6">
+        <div>
+          <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">📚 Resumen: {displayName}</h3>
+        </div>
+        <div className="space-y-4 text-gray-700 dark:text-gray-300">
+          <div>
+            <h4 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">¿Qué son las Cards de {displayName}?</h4>
+            <p className="text-sm">
+              {description}
+            </p>
+          </div>
+          <div>
+            <h4 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">¿Para qué sirven?</h4>
+            <ul className="list-disc list-inside text-sm space-y-1 ml-4">
+              {locationName === 'generate' && (
+                <>
+                  <li>Generar documentos automáticamente desde datos de formularios</li>
+                  <li>Crear archivos PDF, Word, Excel u otros formatos</li>
+                  <li>Transformar datos en documentos estructurados</li>
+                  <li>Integrar con servicios de generación de documentos</li>
+                </>
+              )}
+              {locationName === 'distribute' && (
+                <>
+                  <li>Enviar documentos por email, WhatsApp, o otros canales</li>
+                  <li>Distribuir documentos a múltiples destinatarios</li>
+                  <li>Programar envíos automáticos</li>
+                  <li>Integrar con servicios de comunicación</li>
+                </>
+              )}
+              {locationName === 'automations' && (
+                <>
+                  <li>Automatizar flujos de trabajo complejos</li>
+                  <li>Conectar múltiples acciones en secuencia</li>
+                  <li>Ejecutar tareas basadas en condiciones</li>
+                  <li>Integrar con servicios externos de automatización</li>
+                </>
+              )}
+              {locationName === 'integrations' && (
+                <>
+                  <li>Conectar Formara con servicios externos (APIs, bases de datos, etc.)</li>
+                  <li>Sincronizar datos entre sistemas</li>
+                  <li>Importar y exportar información</li>
+                  <li>Proporcionar funcionalidades adicionales a los usuarios</li>
+                </>
+              )}
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">¿Cómo se muestran y usan en Formara?</h4>
+            <p className="text-sm mb-2">
+              Las Cards de {displayName} aparecen en la sección correspondiente de Formara:
+            </p>
+            <ul className="list-disc list-inside text-sm space-y-1 ml-4">
+              <li>Se muestran como tarjetas en la página de {displayName}</li>
+              <li>Los usuarios pueden configurarlas y activarlas</li>
+              <li>Pueden tener componentes de configuración personalizados</li>
+              <li>Se integran con el sistema de autenticación y permisos</li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">¿Cómo se agregan y programan en el plugin?</h4>
+            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-700">
+              <p className="text-sm font-mono mb-2">1. Definir la card en el manifest.json:</p>
+              <pre className="text-xs bg-gray-900 dark:bg-gray-950 text-green-400 p-3 rounded overflow-x-auto">
+{`"cards": [
+  {
+    "id": "mi-card",
+    "location": "${locationName}",
+    "displayName": "Mi Card",
+    "description": "Descripción de la card"
+  }
+]`}
+              </pre>
+              <p className="text-sm font-mono mt-4 mb-2">2. Exportar en frontend/index.ts:</p>
+              <pre className="text-xs bg-gray-900 dark:bg-gray-950 text-green-400 p-3 rounded overflow-x-auto">
+{`export const cards = [
+  {
+    id: 'mi-card',
+    location: '${locationName}',
+    displayName: 'Mi Card',
+    configComponent: MiCardConfig,
+    // ...
+  }
+];`}
+              </pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Renderizar grid de cards por location
+  const renderCardsGrid = (locationCards: any[], locationName: string) => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Card de Resumen siempre al inicio */}
-        <button
-          onClick={() => {
-            setSelectedIntegration('__RESUMEN_INTEGRATIONS__');
-            setIntegrationSubView('resumen');
-          }}
-          className="rounded-xl border-2 border-blue-300 dark:border-blue-600 p-4 text-left shadow-sm bg-blue-50 dark:bg-blue-900/30 transition hover:shadow"
-        >
-          <div className="text-base font-semibold mb-1 text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            📚 Resumen: Integrations
-          </div>
-          <div className="text-xs text-gray-600 dark:text-gray-300 mb-2">Guía completa</div>
-        </button>
-        {integrations.map((integration: any) => {
-          const route = routeIntegrations[integration.id];
+        {locationCards.map((card: any) => {
+          const route = routeCards[card.id];
           
           return (
-            <IntegrationCard
-              key={integration.id}
-              integration={integration}
+            <CardComponent
+              key={card.id}
+              card={card}
               onClick={() => {
                 if (route) {
                   // Para rutas especiales, mostrar vista de detalle
-                  setIntegrationSubView(route);
-                  setSelectedIntegration(integration.id);
+                  setCardSubView(route);
+                  setSelectedCard(card.id);
+                  setSelectedCardLocation(locationName);
                 } else {
                   // Para otras, abrir modal
-                  setSelectedIntegration(integration.id);
-                  setIntegrationModalOpen(true);
+                  setSelectedCard(card.id);
+                  setSelectedCardLocation(locationName);
+                  setCardModalOpen(true);
                 }
               }}
             />
@@ -941,116 +1294,48 @@ export function DevApp({
     );
   };
 
-  // Renderizar vista de detalle para integraciones con ruta (como afip-facturacion)
-  const renderIntegrationDetail = () => {
-    // Mostrar resumen si se selecciona la opción especial
-    if (selectedIntegration === '__RESUMEN_INTEGRATIONS__' && integrationSubView === 'resumen') {
-      return (
-        <div className="space-y-6 p-6">
-          <div>
-            <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">📚 Resumen: Integrations</h3>
-          </div>
-          <div className="space-y-4 text-gray-700 dark:text-gray-300">
-            <div>
-              <h4 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">¿Qué son las Integrations?</h4>
-              <p className="text-sm">
-                Las Integrations son cards configurables que aparecen en la página "Integrar" de Formara. 
-                Permiten a los usuarios configurar conexiones con servicios externos o funcionalidades avanzadas del plugin.
-              </p>
-            </div>
-            <div>
-              <h4 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">¿Para qué sirven?</h4>
-              <ul className="list-disc list-inside text-sm space-y-1 ml-4">
-                <li>Configurar conexiones con servicios externos (ej: Google Sheets, WhatsApp, Signatura)</li>
-                <li>Gestionar certificados y credenciales (ej: AFIP, APIs)</li>
-                <li>Configurar webhooks y automatizaciones</li>
-                <li>Activar funcionalidades avanzadas del plugin</li>
-                <li>Personalizar comportamiento del plugin por workspace</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">¿Cómo se muestran y usan en Formara?</h4>
-              <p className="text-sm mb-2">
-                Las Integrations aparecen como cards en la página <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">/integrations</code> de Formara:
-              </p>
-              <ul className="list-disc list-inside text-sm space-y-1 ml-4">
-                <li>Cada card muestra el icono, nombre y descripción de la integration</li>
-                <li>Al hacer clic, se abre un modal o vista de detalle con el componente de configuración</li>
-                <li>El componente permite configurar la integration (credenciales, opciones, etc.)</li>
-                <li>Las categorías determinan dónde aparecen: <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">automation</code> va a Automatizar, el resto a Integrar</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">¿Cómo se agregan y programan en el plugin?</h4>
-              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-700">
-                <p className="text-sm font-mono mb-2">1. Crear el componente de configuración:</p>
-                <pre className="text-xs bg-gray-900 dark:bg-gray-950 text-green-400 p-3 rounded overflow-x-auto">
-{`plugins/mi-plugin/frontend/components/
-  └── MiIntegrationConfig.tsx`}
-                </pre>
-                <p className="text-sm font-mono mt-4 mb-2">2. Exportar en frontend/index.ts:</p>
-                <pre className="text-xs bg-gray-900 dark:bg-gray-950 text-green-400 p-3 rounded overflow-x-auto">
-{`import MiIntegrationConfig from './components/MiIntegrationConfig';
 
-export const integrations = [
-  {
-    id: 'mi-integration',
-    displayName: 'Mi Integración',
-    description: 'Descripción...',
-    icon: '🔌',
-    category: 'other',
-    configComponent: MiIntegrationConfig
-  }
-];`}
-                </pre>
-                <p className="text-sm mt-4">
-                  El componente debe aceptar props <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">workspaceId</code> 
-                  y <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">onClose</code>. 
-                  Las integrations se cargan automáticamente en build-time desde todos los plugins.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    
-    if (!selectedIntegration || !integrationSubView) return null;
+  // Renderizar vista de detalle para cards con ruta
+  const renderCardDetail = () => {
+    if (!selectedCard || !selectedCardLocation || !cardSubView) return null;
 
-    const integration = integrations.find((i: any) => i.id === selectedIntegration);
-    if (!integration) return null;
+    const locationCards = cardsByLocation[selectedCardLocation as keyof typeof cardsByLocation] || [];
+    const card = locationCards.find((c: any) => c.id === selectedCard);
+    if (!card) return null;
 
-    const IntegrationComponent = integrationComponents[integration.id];
+    const CardComponent = cardComponents[card.id];
 
     return (
       <div>
         <div className="mb-4">
           <button
             onClick={() => {
-              setIntegrationSubView(null);
-              setSelectedIntegration(null);
+              setCardSubView(null);
+              setSelectedCard(null);
+              setSelectedCardLocation(null);
             }}
             className="text-sm text-gray-600 dark:text-gray-400 hover:underline mb-3"
           >
-            ← Volver a integraciones
+            ← Volver
           </button>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {integration.icon || '🔌'} {integration.displayName}
+            {card.icon || '🔌'} {card.displayName}
           </h2>
         </div>
-        {IntegrationComponent ? (
-          <IntegrationComponent
+        {CardComponent ? (
+          <CardComponent
             workspaceId={1}
             backendUrl={backendUrl}
             onClose={() => {
-              setIntegrationSubView(null);
-              setSelectedIntegration(null);
+              setCardSubView(null);
+              setSelectedCard(null);
+              setSelectedCardLocation(null);
             }}
           />
         ) : (
           <div className="p-4 border border-yellow-200 dark:border-yellow-800 rounded-lg bg-yellow-50 dark:bg-yellow-900/30">
             <p className="text-sm text-yellow-900 dark:text-yellow-300">
-              Esta integración no tiene componente de configuración personalizado disponible.
+              Esta card no tiene componente de configuración personalizado disponible.
             </p>
           </div>
         )}
@@ -1058,44 +1343,45 @@ export const integrations = [
     );
   };
 
-  // Renderizar modal de integración
-  const renderIntegrationModal = () => {
-    if (!integrationModalOpen || !selectedIntegration) return null;
+  // Renderizar modal de card
+  const renderCardModal = () => {
+    if (!cardModalOpen || !selectedCard || !selectedCardLocation) return null;
 
-    const integration = integrations.find((i: any) => i.id === selectedIntegration);
-    if (!integration) return null;
+    const locationCards = cardsByLocation[selectedCardLocation as keyof typeof cardsByLocation] || [];
+    const card = locationCards.find((c: any) => c.id === selectedCard);
+    if (!card) return null;
 
-    const IntegrationComponent = integrationComponents[integration.id];
+    const CardComponent = cardComponents[card.id];
 
     return (
       <div className="fixed inset-0 z-50">
-        <div className="absolute inset-0 bg-black/40" onClick={() => setIntegrationModalOpen(false)} />
+        <div className="absolute inset-0 bg-black/40" onClick={() => setCardModalOpen(false)} />
         <div className="absolute inset-0 flex items-center justify-center p-4">
           <div className="w-full max-w-3xl rounded-lg border bg-white dark:bg-gray-800 shadow-xl overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                {integration.icon || '🔌'} {integration.displayName}
+                {card.icon || '🔌'} {card.displayName}
               </h2>
               <button
-                onClick={() => setIntegrationModalOpen(false)}
+                onClick={() => setCardModalOpen(false)}
                 className="rounded-md border px-2 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
               >
                 Cerrar
               </button>
             </div>
             <div className="p-6">
-              {IntegrationComponent ? (
-                <IntegrationComponent
+              {CardComponent ? (
+                <CardComponent
                   workspaceId={1}
                   backendUrl={backendUrl}
-                  onClose={() => setIntegrationModalOpen(false)}
+                  onClose={() => setCardModalOpen(false)}
                 />
               ) : (
                 <div className="space-y-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{integration.description || ''}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{card.description || ''}</p>
                   <div className="p-4 border border-yellow-200 dark:border-yellow-800 rounded-lg bg-yellow-50 dark:bg-yellow-900/30">
                     <p className="text-sm text-yellow-900 dark:text-yellow-300">
-                      Esta integración no tiene componente de configuración personalizado disponible en el
+                      Esta card no tiene componente de configuración personalizado disponible en el
                       entorno de desarrollo.
                     </p>
                   </div>
@@ -1163,266 +1449,583 @@ export const integrations = [
 
         <Tabs value={selectedTab} onValueChange={setSelectedTab}>
           <TabsList>
-            {fieldTypes.length > 0 && (
-              <TabsTrigger value="field-types" onClick={() => setSelectedTab('field-types')}>
-                Field Types ({fieldTypes.length})
-              </TabsTrigger>
-            )}
-            {loadedActions.length > 0 && (
-              <TabsTrigger value="actions" onClick={() => setSelectedTab('actions')}>
-                Actions ({loadedActions.length})
-              </TabsTrigger>
-            )}
-            {integrations.length > 0 && (
-              <TabsTrigger value="integrations" onClick={() => setSelectedTab('integrations')}>
-                Integrations ({integrations.length})
-              </TabsTrigger>
-            )}
+            <TabsTrigger value="field-types" onClick={() => setSelectedTab('field-types')}>
+              Field Types
+              {fieldTypes.length > 0 && (
+                <span className="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                  {fieldTypes.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="actions" onClick={() => setSelectedTab('actions')}>
+              Actions
+              {loadedActions.length > 0 && (
+                <span className="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                  {loadedActions.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="hooks" onClick={() => setSelectedTab('hooks')}>
+              Hooks
+              {hooks.length > 0 && (
+                <span className="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                  {hooks.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="templates" onClick={() => setSelectedTab('templates')}>
+              Templates
+              {(schemas.length + templates.length) > 0 && (
+                <span className="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                  {schemas.length + templates.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="cards" onClick={() => setSelectedTab('cards')}>
+              Cards
+              {(cardsByLocation.generate.length + cardsByLocation.distribute.length + cardsByLocation.automations.length + cardsByLocation.integrations.length) > 0 && (
+                <span className="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                  {cardsByLocation.generate.length + cardsByLocation.distribute.length + cardsByLocation.automations.length + cardsByLocation.integrations.length}
+                </span>
+              )}
+            </TabsTrigger>
           </TabsList>
 
-          {fieldTypes.length > 0 && (
-            <TabsContent value="field-types">
-              <div className="grid gap-4 mt-4" style={{ gridTemplateColumns: '1fr 3fr' }}>
-                <div>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Field Types</CardTitle>
-                      <CardDescription>{fieldTypes.length} tipos disponibles</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                      <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                        {/* Opción Resumen siempre al inicio */}
+          <TabsContent value="cards">
+            <div className="grid gap-4 mt-4" style={{ gridTemplateColumns: '1fr 3fr' }}>
+              <div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Cards</CardTitle>
+                    <CardDescription>Navegación de cards</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                      <button
+                        onClick={() => setSelectedCardSection('resumen')}
+                        className={`w-full text-left px-3 py-2 rounded transition-all border-2 ${
+                          selectedCardSection === 'resumen'
+                            ? 'text-blue-900 dark:text-blue-100 border-blue-600 dark:border-blue-400 font-semibold shadow-lg scale-105'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                        style={selectedCardSection === 'resumen' ? {
+                          backgroundColor: isDark ? '#1e3a8a' : '#bfdbfe',
+                          borderColor: isDark ? '#60a5fa' : '#2563eb',
+                          borderWidth: '2px',
+                        } : undefined}
+                      >
+                        <div className="font-medium text-sm flex items-center justify-between">
+                          <span>📚 Resumen</span>
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Guía completa</div>
+                      </button>
+                      <button
+                        onClick={() => setSelectedCardSection('generate')}
+                        className={`w-full text-left px-3 py-2 rounded transition-all border-2 ${
+                          selectedCardSection === 'generate'
+                            ? 'text-blue-900 dark:text-blue-100 border-blue-600 dark:border-blue-400 font-semibold shadow-lg scale-105'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                        style={selectedCardSection === 'generate' ? {
+                          backgroundColor: isDark ? '#1e3a8a' : '#bfdbfe',
+                          borderColor: isDark ? '#60a5fa' : '#2563eb',
+                          borderWidth: '2px',
+                        } : undefined}
+                      >
+                        <div className="font-medium text-sm flex items-center justify-between">
+                          <span>📄 Generate</span>
+                          {cardsByLocation.generate.length > 0 && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                              {cardsByLocation.generate.length}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => setSelectedCardSection('distribute')}
+                        className={`w-full text-left px-3 py-2 rounded transition-all border-2 ${
+                          selectedCardSection === 'distribute'
+                            ? 'text-blue-900 dark:text-blue-100 border-blue-600 dark:border-blue-400 font-semibold shadow-lg scale-105'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                        style={selectedCardSection === 'distribute' ? {
+                          backgroundColor: isDark ? '#1e3a8a' : '#bfdbfe',
+                          borderColor: isDark ? '#60a5fa' : '#2563eb',
+                          borderWidth: '2px',
+                        } : undefined}
+                      >
+                        <div className="font-medium text-sm flex items-center justify-between">
+                          <span>📧 Distribute</span>
+                          {cardsByLocation.distribute.length > 0 && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                              {cardsByLocation.distribute.length}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => setSelectedCardSection('automations')}
+                        className={`w-full text-left px-3 py-2 rounded transition-all border-2 ${
+                          selectedCardSection === 'automations'
+                            ? 'text-blue-900 dark:text-blue-100 border-blue-600 dark:border-blue-400 font-semibold shadow-lg scale-105'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                        style={selectedCardSection === 'automations' ? {
+                          backgroundColor: isDark ? '#1e3a8a' : '#bfdbfe',
+                          borderColor: isDark ? '#60a5fa' : '#2563eb',
+                          borderWidth: '2px',
+                        } : undefined}
+                      >
+                        <div className="font-medium text-sm flex items-center justify-between">
+                          <span>⚙️ Automations</span>
+                          {cardsByLocation.automations.length > 0 && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                              {cardsByLocation.automations.length}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => setSelectedCardSection('integrations')}
+                        className={`w-full text-left px-3 py-2 rounded transition-all border-2 ${
+                          selectedCardSection === 'integrations'
+                            ? 'text-blue-900 dark:text-blue-100 border-blue-600 dark:border-blue-400 font-semibold shadow-lg scale-105'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                        style={selectedCardSection === 'integrations' ? {
+                          backgroundColor: isDark ? '#1e3a8a' : '#bfdbfe',
+                          borderColor: isDark ? '#60a5fa' : '#2563eb',
+                          borderWidth: '2px',
+                        } : undefined}
+                      >
+                        <div className="font-medium text-sm flex items-center justify-between">
+                          <span>🔌 Integrations</span>
+                          {cardsByLocation.integrations.length > 0 && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                              {cardsByLocation.integrations.length}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              <div>
+                <Card>
+                  <CardContent className="p-6">
+                    {selectedCardSection === 'resumen' && (
+                      <div className="space-y-6">
+                        <div>
+                          <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">📚 Resumen: Cards</h3>
+                        </div>
+                        <div className="space-y-4 text-gray-700 dark:text-gray-300">
+                          <div>
+                            <h4 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">¿Qué son las Cards?</h4>
+                            <p className="text-sm">
+                              Las Cards son capacidades unificadas que los plugins pueden agregar a Formara. Reemplazan el sistema anterior 
+                              de integrations, generates y distributes con un sistema más flexible basado en locations.
+                            </p>
+                          </div>
+                          <div>
+                            <h4 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">Locations disponibles</h4>
+                            <ul className="list-disc list-inside text-sm space-y-2 ml-4">
+                              <li><strong>Generate:</strong> Generar documentos automáticamente desde datos de formularios</li>
+                              <li><strong>Distribute:</strong> Enviar documentos por email, WhatsApp, o otros canales</li>
+                              <li><strong>Automations:</strong> Crear flujos de trabajo automatizados</li>
+                              <li><strong>Integrations:</strong> Conectar Formara con servicios externos</li>
+                            </ul>
+                          </div>
+                          <div>
+                            <h4 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">¿Cómo se agregan y programan en el plugin?</h4>
+                            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-700">
+                              <p className="text-sm font-mono mb-2">1. Definir la card en el manifest.json:</p>
+                              <pre className="text-xs bg-gray-900 dark:bg-gray-950 text-green-400 p-3 rounded overflow-x-auto">
+{`"cards": [
+  {
+    "id": "mi-card",
+    "location": "generate",
+    "displayName": "Mi Card",
+    "description": "Descripción de la card"
+  }
+]`}
+                              </pre>
+                              <p className="text-sm font-mono mt-4 mb-2">2. Exportar en frontend/index.ts:</p>
+                              <pre className="text-xs bg-gray-900 dark:bg-gray-950 text-green-400 p-3 rounded overflow-x-auto">
+{`export const cards = [
+  {
+    id: 'mi-card',
+    location: 'generate',
+    displayName: 'Mi Card',
+    configComponent: MiCardConfig,
+    // ...
+  }
+];`}
+                              </pre>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {selectedCardSection === 'generate' && (
+                      <div>
+                        {cardsByLocation.generate.length > 0 ? (
+                          renderCardsGrid(cardsByLocation.generate, 'generate')
+                        ) : (
+                          <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+                            No hay cards de Generate en este plugin
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {selectedCardSection === 'distribute' && (
+                      <div>
+                        {cardsByLocation.distribute.length > 0 ? (
+                          renderCardsGrid(cardsByLocation.distribute, 'distribute')
+                        ) : (
+                          <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+                            No hay cards de Distribute en este plugin
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {selectedCardSection === 'automations' && (
+                      <div>
+                        {cardsByLocation.automations.length > 0 ? (
+                          renderCardsGrid(cardsByLocation.automations, 'automations')
+                        ) : (
+                          <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+                            No hay cards de Automations en este plugin
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {selectedCardSection === 'integrations' && (
+                      <div>
+                        {cardSubView ? (
+                          renderCardDetail()
+                        ) : (
+                          <>
+                            {cardsByLocation.integrations.length > 0 ? (
+                              renderCardsGrid(cardsByLocation.integrations, 'integrations')
+                            ) : (
+                              <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+                                No hay cards de Integrations en este plugin
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="field-types">
+            <div className="grid gap-4 mt-4" style={{ gridTemplateColumns: '1fr 3fr' }}>
+              <div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Field Types</CardTitle>
+                    <CardDescription>{fieldTypes.length} tipos disponibles</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {/* Opción Resumen siempre al inicio */}
+                      <button
+                        onClick={() => {
+                          setSelectedFieldType('__RESUMEN_FIELD_TYPES__');
+                          setFieldValue('');
+                          setValidationResult(null);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded transition-all border-2 ${
+                          selectedFieldType === '__RESUMEN_FIELD_TYPES__'
+                            ? 'text-blue-900 dark:text-blue-100 border-blue-600 dark:border-blue-400 font-semibold shadow-lg scale-105'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                        style={selectedFieldType === '__RESUMEN_FIELD_TYPES__' ? {
+                          backgroundColor: isDark ? '#1e3a8a' : '#bfdbfe',
+                          borderColor: isDark ? '#60a5fa' : '#2563eb',
+                          borderWidth: '2px',
+                        } : undefined}
+                      >
+                        <div className="font-medium text-sm">📚 Resumen: Field Types</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Guía completa</div>
+                      </button>
+                      {fieldTypes.map((ft) => (
                         <button
+                          key={ft.id}
                           onClick={() => {
-                            setSelectedFieldType('__RESUMEN_FIELD_TYPES__');
+                            setSelectedFieldType(ft.id);
                             setFieldValue('');
                             setValidationResult(null);
                           }}
                           className={`w-full text-left px-3 py-2 rounded transition-all border-2 ${
-                            selectedFieldType === '__RESUMEN_FIELD_TYPES__'
+                            selectedFieldType === ft.id
                               ? 'text-blue-900 dark:text-blue-100 border-blue-600 dark:border-blue-400 font-semibold shadow-lg scale-105'
                               : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
                           }`}
-                          style={selectedFieldType === '__RESUMEN_FIELD_TYPES__' ? {
+                          style={selectedFieldType === ft.id ? {
                             backgroundColor: isDark ? '#1e3a8a' : '#bfdbfe',
                             borderColor: isDark ? '#60a5fa' : '#2563eb',
                             borderWidth: '2px',
                           } : undefined}
                         >
-                          <div className="font-medium text-sm">📚 Resumen: Field Types</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">Guía completa</div>
+                          <div className="font-medium text-sm">{ft.label}</div>
+                          {ft.category && (
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{ft.category}</div>
+                          )}
                         </button>
-                        {fieldTypes.map((ft) => (
-                          <button
-                            key={ft.id}
-                            onClick={() => {
-                              setSelectedFieldType(ft.id);
-                              setFieldValue('');
-                              setValidationResult(null);
-                            }}
-                            className={`w-full text-left px-3 py-2 rounded transition-all border-2 ${
-                              selectedFieldType === ft.id
-                                ? 'text-blue-900 dark:text-blue-100 border-blue-600 dark:border-blue-400 font-semibold shadow-lg scale-105'
-                                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
-                            }`}
-                            style={selectedFieldType === ft.id ? {
-                              backgroundColor: isDark ? '#1e3a8a' : '#bfdbfe',
-                              borderColor: isDark ? '#60a5fa' : '#2563eb',
-                              borderWidth: '2px',
-                            } : undefined}
-                          >
-                            <div className="font-medium text-sm">{ft.label}</div>
-                            {ft.category && (
-                              <div className="text-xs text-gray-500 dark:text-gray-400">{ft.category}</div>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-                <div>
-                  <Card>
-                    <CardContent className="p-6">{renderTabContent()}</CardContent>
-                  </Card>
-                </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </TabsContent>
-          )}
+              <div>
+                <Card>
+                  <CardContent className="p-6">{renderTabContent()}</CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
 
-          {loadedActions.length > 0 && (
-            <TabsContent value="actions">
-              <div className="grid gap-4 mt-4" style={{ gridTemplateColumns: '1fr 3fr' }}>
-                <div>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Actions</CardTitle>
-                      <CardDescription>
-                        {loadingActions ? 'Cargando...' : `${loadedActions.length} acciones disponibles`}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                      <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                        {/* Opción Resumen siempre al inicio */}
+          <TabsContent value="actions">
+            <div className="grid gap-4 mt-4" style={{ gridTemplateColumns: '1fr 3fr' }}>
+              <div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Actions</CardTitle>
+                    <CardDescription>
+                      {loadingActions ? 'Cargando...' : `${loadedActions.length} acciones disponibles`}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {/* Opción Resumen siempre al inicio */}
+                      <button
+                        onClick={() => {
+                          setSelectedAction('__RESUMEN_ACTIONS__');
+                          setSelectedMockup(null);
+                          setCustomJson('');
+                          setCustomJsonError(null);
+                          setActionResult(null);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded transition-all border-2 ${
+                          selectedAction === '__RESUMEN_ACTIONS__'
+                            ? 'text-blue-900 dark:text-blue-100 border-blue-600 dark:border-blue-400 font-semibold shadow-lg scale-105'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                        style={selectedAction === '__RESUMEN_ACTIONS__' ? {
+                          backgroundColor: isDark ? '#1e3a8a' : '#bfdbfe',
+                          borderColor: isDark ? '#60a5fa' : '#2563eb',
+                          borderWidth: '2px',
+                        } : undefined}
+                      >
+                        <div className="font-medium text-sm">📚 Resumen: Actions</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Guía completa</div>
+                      </button>
+                      {loadedActions.map((action: any) => (
                         <button
+                          key={action.id}
                           onClick={() => {
-                            setSelectedAction('__RESUMEN_ACTIONS__');
+                            setSelectedAction(action.id);
                             setSelectedMockup(null);
                             setCustomJson('');
                             setCustomJsonError(null);
                             setActionResult(null);
+                            if (Object.keys(mockups).length > 0) {
+                              const firstMockupKey = Object.keys(mockups)[0];
+                              setSelectedMockup(firstMockupKey);
+                            }
                           }}
                           className={`w-full text-left px-3 py-2 rounded transition-all border-2 ${
-                            selectedAction === '__RESUMEN_ACTIONS__'
+                            selectedAction === action.id
                               ? 'text-blue-900 dark:text-blue-100 border-blue-600 dark:border-blue-400 font-semibold shadow-lg scale-105'
                               : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
                           }`}
-                          style={selectedAction === '__RESUMEN_ACTIONS__' ? {
+                          style={selectedAction === action.id ? {
                             backgroundColor: isDark ? '#1e3a8a' : '#bfdbfe',
                             borderColor: isDark ? '#60a5fa' : '#2563eb',
                             borderWidth: '2px',
                           } : undefined}
                         >
-                          <div className="font-medium text-sm">📚 Resumen: Actions</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">Guía completa</div>
-                        </button>
-                        {loadedActions.map((action: any) => (
-                          <button
-                            key={action.id}
-                            onClick={() => {
-                              setSelectedAction(action.id);
-                              setSelectedMockup(null);
-                              setCustomJson('');
-                              setCustomJsonError(null);
-                              setActionResult(null);
-                              if (Object.keys(mockups).length > 0) {
-                                const firstMockupKey = Object.keys(mockups)[0];
-                                setSelectedMockup(firstMockupKey);
-                              }
-                            }}
-                            className={`w-full text-left px-3 py-2 rounded transition-all border-2 ${
-                              selectedAction === action.id
-                                ? 'text-blue-900 dark:text-blue-100 border-blue-600 dark:border-blue-400 font-semibold shadow-lg scale-105'
-                                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
-                            }`}
-                            style={selectedAction === action.id ? {
-                              backgroundColor: isDark ? '#1e3a8a' : '#bfdbfe',
-                              borderColor: isDark ? '#60a5fa' : '#2563eb',
-                              borderWidth: '2px',
-                            } : undefined}
-                          >
-                            <div className="font-medium text-sm">
-                              {action.icon || '⚡'} {action.label}
+                          <div className="font-medium text-sm">
+                            {action.icon || '⚡'} {action.label}
+                          </div>
+                          {action.contexts && action.contexts.length > 0 && (
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {action.contexts.join(', ')}
                             </div>
-                            {action.contexts && action.contexts.length > 0 && (
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {action.contexts.join(', ')}
-                              </div>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-                <div>
-                  <Card>
-                    <CardContent className="p-6">{renderTabContent()}</CardContent>
-                  </Card>
-                </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </TabsContent>
-          )}
+              <div>
+                <Card>
+                  <CardContent className="p-6">{renderTabContent()}</CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
 
-          {integrations.length > 0 && (
-            <TabsContent value="integrations">
-              <div className="grid gap-4 mt-4" style={{ gridTemplateColumns: '1fr 3fr' }}>
-                <div>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Integrations</CardTitle>
-                      <CardDescription>{integrations.length} integraciones disponibles</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                      <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                        {/* Opción Resumen siempre al inicio */}
+          <TabsContent value="hooks">
+            <div className="grid gap-4 mt-4" style={{ gridTemplateColumns: '1fr 3fr' }}>
+              <div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Hooks</CardTitle>
+                    <CardDescription>{hooks.length} hooks disponibles</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {/* Opción Resumen siempre al inicio */}
+                      <button
+                        onClick={() => {
+                          setSelectedHook('__RESUMEN_HOOKS__');
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded transition-all border-2 ${
+                          selectedHook === '__RESUMEN_HOOKS__'
+                            ? 'text-blue-900 dark:text-blue-100 border-blue-600 dark:border-blue-400 font-semibold shadow-lg scale-105'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                        style={selectedHook === '__RESUMEN_HOOKS__' ? {
+                          backgroundColor: isDark ? '#1e3a8a' : '#bfdbfe',
+                          borderColor: isDark ? '#60a5fa' : '#2563eb',
+                          borderWidth: '2px',
+                        } : undefined}
+                      >
+                        <div className="font-medium text-sm">📚 Resumen: Hooks</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Guía completa</div>
+                      </button>
+                      {hooks.map((hook: any) => (
                         <button
+                          key={hook.id}
                           onClick={() => {
-                            setSelectedIntegration('__RESUMEN_INTEGRATIONS__');
-                            setIntegrationSubView('resumen');
+                            setSelectedHook(hook.id);
                           }}
                           className={`w-full text-left px-3 py-2 rounded transition-all border-2 ${
-                            selectedIntegration === '__RESUMEN_INTEGRATIONS__' && integrationSubView === 'resumen'
+                            selectedHook === hook.id
                               ? 'text-blue-900 dark:text-blue-100 border-blue-600 dark:border-blue-400 font-semibold shadow-lg scale-105'
                               : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
                           }`}
-                          style={selectedIntegration === '__RESUMEN_INTEGRATIONS__' && integrationSubView === 'resumen' ? {
+                          style={selectedHook === hook.id ? {
                             backgroundColor: isDark ? '#1e3a8a' : '#bfdbfe',
                             borderColor: isDark ? '#60a5fa' : '#2563eb',
                             borderWidth: '2px',
                           } : undefined}
                         >
-                          <div className="font-medium text-sm">📚 Resumen: Integrations</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">Guía completa</div>
+                          <div className="font-medium text-sm">{hook.id}</div>
+                          {hook.event && (
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{hook.event}</div>
+                          )}
                         </button>
-                        {integrations.map((integration: any) => {
-                          const route = routeIntegrations[integration.id];
-                          return (
-                            <button
-                              key={integration.id}
-                              onClick={() => {
-                                if (route) {
-                                  setIntegrationSubView(route);
-                                  setSelectedIntegration(integration.id);
-                                } else {
-                                  setSelectedIntegration(integration.id);
-                                  setIntegrationModalOpen(true);
-                                }
-                              }}
-                              className={`w-full text-left px-3 py-2 rounded transition-all border-2 ${
-                                selectedIntegration === integration.id && (integrationSubView === route || integrationModalOpen)
-                                  ? 'text-blue-900 dark:text-blue-100 border-blue-600 dark:border-blue-400 font-semibold shadow-lg scale-105'
-                                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
-                              }`}
-                              style={selectedIntegration === integration.id && (integrationSubView === route || integrationModalOpen) ? {
-                                backgroundColor: isDark ? '#1e3a8a' : '#bfdbfe',
-                                borderColor: isDark ? '#60a5fa' : '#2563eb',
-                                borderWidth: '2px',
-                              } : undefined}
-                            >
-                              <div className="font-medium text-sm">
-                                {integration.icon || '🔌'} {integration.displayName}
-                              </div>
-                              {integration.description && (
-                                <div className="text-xs text-gray-500 dark:text-gray-400">{integration.description}</div>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-                <div>
-                  <Card>
-                    <CardContent className="p-6">
-                      {integrationSubView ? (
-                        renderIntegrationDetail()
-                      ) : (
-                        <>
-                          <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Integraciones</h2>
-                          {renderIntegrationsGrid()}
-                        </>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </TabsContent>
-          )}
+              <div>
+                <Card>
+                  <CardContent className="p-6">{renderTabContent()}</CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="templates">
+            <div className="grid gap-4 mt-4" style={{ gridTemplateColumns: '1fr 3fr' }}>
+              <div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Templates</CardTitle>
+                    <CardDescription>{schemas.length + templates.length} templates disponibles</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {/* Opción Resumen siempre al inicio */}
+                      <button
+                        onClick={() => {
+                          setSelectedTemplate('__RESUMEN_TEMPLATES__');
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded transition-all border-2 ${
+                          selectedTemplate === '__RESUMEN_TEMPLATES__'
+                            ? 'text-blue-900 dark:text-blue-100 border-blue-600 dark:border-blue-400 font-semibold shadow-lg scale-105'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                        style={selectedTemplate === '__RESUMEN_TEMPLATES__' ? {
+                          backgroundColor: isDark ? '#1e3a8a' : '#bfdbfe',
+                          borderColor: isDark ? '#60a5fa' : '#2563eb',
+                          borderWidth: '2px',
+                        } : undefined}
+                      >
+                        <div className="font-medium text-sm">📚 Resumen: Templates</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Guía completa</div>
+                      </button>
+                      {schemas.map((schema: any, index: number) => (
+                        <button
+                          key={`schema-${index}`}
+                          onClick={() => {
+                            setSelectedTemplate(`schema-${index}`);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded transition-all border-2 ${
+                            selectedTemplate === `schema-${index}`
+                              ? 'text-blue-900 dark:text-blue-100 border-blue-600 dark:border-blue-400 font-semibold shadow-lg scale-105'
+                              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
+                          }`}
+                          style={selectedTemplate === `schema-${index}` ? {
+                            backgroundColor: isDark ? '#1e3a8a' : '#bfdbfe',
+                            borderColor: isDark ? '#60a5fa' : '#2563eb',
+                            borderWidth: '2px',
+                          } : undefined}
+                        >
+                          <div className="font-medium text-sm">
+                            📝 {schema.name || schema.title || `Schema ${index + 1}`}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Formulario</div>
+                        </button>
+                      ))}
+                      {templates.map((template: any, index: number) => (
+                        <button
+                          key={`template-${index}`}
+                          onClick={() => {
+                            setSelectedTemplate(`template-${index}`);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded transition-all border-2 ${
+                            selectedTemplate === `template-${index}`
+                              ? 'text-blue-900 dark:text-blue-100 border-blue-600 dark:border-blue-400 font-semibold shadow-lg scale-105'
+                              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent hover:border-gray-300 dark:hover:border-gray-600'
+                          }`}
+                          style={selectedTemplate === `template-${index}` ? {
+                            backgroundColor: isDark ? '#1e3a8a' : '#bfdbfe',
+                            borderColor: isDark ? '#60a5fa' : '#2563eb',
+                            borderWidth: '2px',
+                          } : undefined}
+                        >
+                          <div className="font-medium text-sm">
+                            📄 {template.name || template.title || `Template ${index + 1}`}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Documento</div>
+                        </button>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              <div>
+                <Card>
+                  <CardContent className="p-6">{renderTabContent()}</CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
-      {renderIntegrationModal()}
+      {renderCardModal()}
     </div>
   );
 }

@@ -24,8 +24,14 @@ export interface DevAppProps {
     fieldTypes?: any[];
     /** Actions del plugin (del manifest) */
     actions?: any[];
-    /** Integrations del plugin (array de integration objects) */
-    integrations?: any[];
+    /** Hooks del plugin (del manifest) */
+    hooks?: any[];
+    /** Schemas del plugin (formularios) */
+    schemas?: any[];
+    /** Templates del plugin (documentos) */
+    templates?: any[];
+    /** Cards del plugin (array de card objects con location) */
+    cards?: any[];
     /** Mockups para testing de actions (opcional, si no se proporciona se intenta cargar automáticamente) */
     mockups?: Record<string, {
         label: string;
@@ -57,8 +63,8 @@ export interface DevAppProps {
         method: string;
         path: string;
     }>;
-    /** Componentes de configuración de integrations (opcional) */
-    integrationComponents?: Record<string, React.ComponentType<any>>;
+    /** Componentes de configuración de cards (opcional) */
+    cardComponents?: Record<string, React.ComponentType<any>>;
 }
-export declare function DevApp({ pluginName, displayName, version, description, fieldTypes, actions, integrations, mockups: providedMockups, backendUrl, uiComponents, actionEndpoints, integrationComponents: providedIntegrationComponents, }: DevAppProps): import("react/jsx-runtime").JSX.Element;
+export declare function DevApp({ pluginName, displayName, version, description, fieldTypes, actions, hooks, schemas, templates, cards, mockups: providedMockups, backendUrl, uiComponents, actionEndpoints, cardComponents: providedCardComponents, }: DevAppProps): import("react/jsx-runtime").JSX.Element;
 //# sourceMappingURL=DevApp.d.ts.map

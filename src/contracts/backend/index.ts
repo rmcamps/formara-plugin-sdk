@@ -10,6 +10,8 @@
 export * from './actions';
 export * from './hooks';
 export * from './integrations';
+export * from './generates';
+export * from './distributes';
 
 // Tipos adicionales que los plugins pueden necesitar
 export type {
@@ -38,4 +40,18 @@ export type {
   IntegrationRegistry,
   IntegrationsListResponse
 } from './integrations';
+
+export type {
+  GenerateDefinition,
+  GenerateConfig,
+  GenerateRegistry,
+  GeneratesListResponse
+} from './generates';
+
+export type {
+  DistributeDefinition,
+  DistributeConfig,
+  DistributeRegistry,
+  DistributesListResponse
+} from './distributes';
 

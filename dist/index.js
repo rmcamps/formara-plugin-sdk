@@ -9,3 +9,4 @@ export * from './contracts/frontend';
 export * from './contracts/backend';
 // Exportar utilidades
 export * from './utils/vite-config';
+export * from './utils/tailwind-config';
