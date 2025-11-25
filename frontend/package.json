@@ -1,0 +1,8 @@
+{
+  "name": "@formara/plugin-sdk-frontend-shim",
+  "version": "1.0.0",
+  "main": "index.tsx",
+  "type": "module"
+}
+
+

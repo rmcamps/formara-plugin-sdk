@@ -1,0 +1,147 @@
+// Schema mínimo de Prisma para desarrollo de plugins
+// Incluye solo las tablas esenciales que los plugins necesitan
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       Int     @id @default(autoincrement())
+  email    String  @unique
+  name     String?
+  picture  String?
+  documents Document[]
+  workspaces WorkspaceMember[]
+}
+
+model Workspace {
+  id       Int     @id @default(autoincrement())
+  name     String
+  alias    String? @unique
+  ownerId  Int
+  documents Document[]
+  forms    Form[]
+  members  WorkspaceMember[]
+  embeds   Embed[]
+  gsheets  GoogleSheetIntegration[]
+  webhooks Webhook[]
+}
+
+model WorkspaceMember {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  workspaceId Int
+  role        String    @default("member")
+  user        User      @relation(fields: [userId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  @@unique([userId, workspaceId])
+}
+
+model Document {
+  id             Int       @id @default(autoincrement())
+  name           String
+  status         String
+  type           String
+  ownerId        Int
+  uploadedAt     DateTime  @default(now())
+  filePath       String
+  previewPath    String?
+  extractedData  Json?
+  structuredData Json?
+  textContent    String?   @db.Text
+  validationResults Json?
+  formId         Int?
+  workspaceId    Int?
+  owner          User      @relation(fields: [ownerId], references: [id])
+  workspace      Workspace? @relation(fields: [workspaceId], references: [id])
+  form           Form?     @relation(fields: [formId], references: [id])
+}
+
+model Form {
+  id          Int      @id @default(autoincrement())
+  name        String
+  slug        String?
+  title       String
+  type        String
+  schemaText  String?
+  workspaceId Int?
+  createdAt   DateTime @default(now())
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
+  documents   Document[]
+  fields      Field[]
+  webhooks    Webhook[]
+  gsheets     GoogleSheetIntegration[]
+  @@unique([slug, workspaceId])
+}
+
+model Field {
+  id     Int    @id @default(autoincrement())
+  formId Int
+  name   String
+  type   String
+  label  String?
+  order  Int    @default(0)
+  config Json?
+  form   Form   @relation(fields: [formId], references: [id], onDelete: Cascade)
+  @@unique([formId, name])
+}
+
+// Tabla para credenciales de integraciones (OAuth, API keys, etc.)
+model IntegrationCredential {
+  id          Int      @id @default(autoincrement())
+  workspaceId Int
+  provider    String   // 'gsheets', 'signatura', etc.
+  data        String   // JSON cifrado con tokens/credenciales
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+  @@unique([workspaceId, provider])
+}
+
+// Plugin: Embeds
+model Embed {
+  id            Int      @id @default(autoincrement())
+  workspaceId   Int
+  type          String   // 'upload', 'list', 'form'
+  formId        Int?
+  name          String
+  permissions   String   @default("read")
+  theme         String   @default("light")
+  publicToken   String   @unique
+  config        Json?
+  allowedDomain String?
+  createdAt     DateTime @default(now())
+  workspace     Workspace @relation(fields: [workspaceId], references: [id])
+}
+
+// Plugin: Google Sheets
+model GoogleSheetIntegration {
+  id            Int      @id @default(autoincrement())
+  workspaceId   Int
+  formId        Int
+  spreadsheetId String
+  sheetName     String   @default("Hoja 1")
+  createdAt     DateTime @default(now())
+  workspace     Workspace @relation(fields: [workspaceId], references: [id])
+  form          Form     @relation(fields: [formId], references: [id])
+  @@unique([workspaceId, formId])
+}
+
+// Plugin: Webhooks
+model Webhook {
+  id          Int      @id @default(autoincrement())
+  workspaceId Int
+  url         String
+  eventType   String
+  formId      Int?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  form        Form?    @relation(fields: [formId], references: [id])
+}
+
+
