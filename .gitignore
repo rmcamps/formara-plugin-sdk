@@ -57,3 +57,7 @@ Thumbs.db
 
 dumps/
 dump/
+
+# npm config (puede contener tokens, aunque usamos variables de entorno)
+.npmrc
+!.npmrc.example
