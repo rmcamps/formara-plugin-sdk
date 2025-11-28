@@ -4,39 +4,13 @@ SDK para desarrollo de plugins de Formara. Proporciona interfaces/contratos y he
 
 ## 📦 Instalación
 
-### Desde GitHub Packages
+Instala el SDK desde npm:
 
 ```bash
 npm install @formara/plugin-sdk --save-dev
 ```
 
-**Configuración requerida:**
-
-Crea un archivo `.npmrc` en la raíz de tu plugin:
-
-```
-@formara:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
-```
-
-O configura globalmente:
-
-```bash
-npm config set @formara:registry https://npm.pkg.github.com
-```
-
-**Autenticación:**
-
-Necesitas un token de GitHub con permisos `read:packages`. Crea uno en:
-- GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
-- O usa `GITHUB_TOKEN` si estás en GitHub Actions
-
-Luego:
-
-```bash
-export GITHUB_TOKEN=tu_token_aqui
-npm install
-```
+¡Eso es todo! No necesitas configuración adicional.
 
 ## 📚 Uso
 
@@ -82,7 +56,7 @@ export default defineConfig({
 
 ## 🔧 Desarrollo
 
-Este SDK se desarrolla en el repositorio `formara-plugin-sdk` y se publica automáticamente a GitHub Packages cuando se hace push a `main` o se crea un tag `v*`.
+Este SDK se desarrolla en el repositorio `formara-plugin-sdk` y se publica a npmjs.com.
 
 ### Publicar manualmente
 

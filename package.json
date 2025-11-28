@@ -1,10 +1,10 @@
 {
   "name": "@formara/plugin-sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "SDK para desarrollo de plugins de Formara",
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "access": "public"
   },
   "repository": {
     "type": "git",

@@ -1,1 +1,0 @@
-{"version":3,"file":"prisma-adapter.d.ts","sourceRoot":"","sources":["../../../src/sandbox/backend/prisma-adapter.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAEH,OAAO,EAAE,YAAY,EAAE,MAAM,gBAAgB,CAAC;AA0B9C;;GAEG;AACH,wBAAgB,eAAe,IAAI,YAAY,CA2C9C;AAID,eAAO,MAAM,YAAY,EAAE,YAAgC,CAAC;AAG5D,OAAO,EAAE,YAAY,IAAI,MAAM,EAAE,CAAC"}

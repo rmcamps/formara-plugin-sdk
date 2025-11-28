@@ -2,9 +2,8 @@
  * Contratos Frontend para Plugins de Formara
  *
  * Este archivo re-exporta todas las interfaces frontend del core.
- * En desarrollo (monorepo), usa symlinks a las interfaces del core.
- * En producción (npm package), contiene copias de las interfaces.
+ * Los archivos son copias directas del core (ya no symlinks).
  */
-export * from './field-types';
-export type { FieldTypeDefinition, FieldPreviewProps, FieldRenderProps, FieldConfigProps, FieldConfig } from './field-types';
+export * from './field-types.js';
+export type { FieldTypeDefinition, FieldPreviewProps, FieldRenderProps, FieldConfigProps, FieldConfig } from './field-types.js';
 //# sourceMappingURL=index.d.ts.map

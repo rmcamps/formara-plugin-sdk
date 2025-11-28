@@ -1,1 +1,1 @@
-{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../../src/contracts/frontend/index.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAGH,cAAc,eAAe,CAAC;AAG9B,YAAY,EAAE,mBAAmB,EAAE,iBAAiB,EAAE,gBAAgB,EAAE,gBAAgB,EAAE,WAAW,EAAE,MAAM,eAAe,CAAC"}
+{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../../src/contracts/frontend/index.ts"],"names":[],"mappings":"AAAA;;;;;GAKG;AAGH,cAAc,kBAAkB,CAAC;AAGjC,YAAY,EAAE,mBAAmB,EAAE,iBAAiB,EAAE,gBAAgB,EAAE,gBAAgB,EAAE,WAAW,EAAE,MAAM,kBAAkB,CAAC"}
