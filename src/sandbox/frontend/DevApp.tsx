@@ -589,7 +589,7 @@ export function DevApp({
     id: 'mi-action',
     label: 'Mi Action',
     description: 'Descripción...',
-    contexts: ['document', 'form-record'],
+    contexts: ['document', 'record'],
     handler: async (data: ActionContextData) => {
       // Lógica de la action
       return { success: true, message: '...' };

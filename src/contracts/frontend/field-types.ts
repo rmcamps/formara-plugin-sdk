@@ -93,6 +93,8 @@ export interface FieldRenderProps {
   config: FieldConfig;
   error?: string;
   disabled?: boolean;
+  onBlur?: () => void;      // NUEVO: Para triggers onBlur
+  onFocus?: () => void;     // NUEVO: Para triggers onFocus
 }
 
 /**
@@ -134,7 +136,7 @@ export interface FieldConfig {
   label?: string;
   description?: string;
   placeholder?: string;
-  required?: boolean;
+  required?: boolean | string; // MEJORADO: ahora puede ser expresión FSL
   validation?: {
     pattern?: string;
     min?: number;
@@ -147,18 +149,37 @@ export interface FieldConfig {
   multiple?: boolean;
   defaultValue?: any;
   
-  // Nuevas propiedades
+  // Propiedades de scripting y condicionales
   /** Máscara de input (para string, number, integer) */
   input_mask?: InputMask;
   
-  /** Fórmula de validación (math.js, retorna boolean) */
+  /** Fórmula de validación (FSL, retorna boolean) - LEGACY, usar validations[] */
   validate?: string;
   
-  /** Mensaje de error personalizado para validación */
+  /** Mensaje de error personalizado para validación - LEGACY */
   validate_error?: string;
   
-  /** Fórmula de cálculo (math.js, hace el campo readonly) */
+  /** Validaciones múltiples (NUEVO) */
+  validations?: Array<{
+    expression: string;   // Expresión FSL que debe retornar boolean
+    message: string;      // Mensaje de error si la validación falla
+  }>;
+  
+  /** Fórmula de cálculo (FSL, hace el campo readonly) */
   calc?: string;
+  
+  /** Condición de visibilidad (NUEVO) - Expresión FSL o boolean */
+  visible?: string | boolean;
+  
+  /** Condición de editabilidad (NUEVO) - Expresión FSL o boolean */
+  enabled?: string | boolean;
+  
+  /** Triggers de eventos (NUEVO) */
+  triggers?: {
+    onChange?: string;    // Script FSL ejecutado al cambiar el valor
+    onFocus?: string;     // Script FSL ejecutado al hacer foco
+    onBlur?: string;      // Script FSL ejecutado al perder foco
+  };
   
   /** Configuración de relación (solo para type: 'relation') */
   relation?: RelationConfig;

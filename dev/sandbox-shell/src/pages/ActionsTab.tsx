@@ -39,7 +39,7 @@ export default function ActionsTab({ pluginInfo }: ActionsTabProps) {
       userId: 1
     },
     'form-record-sample': {
-      context: 'form-record',
+      context: 'record',
       formRecord: {
         id: 1,
         formId: 1,
@@ -147,7 +147,7 @@ export default function ActionsTab({ pluginInfo }: ActionsTabProps) {
                   if (action.contexts?.includes('document')) {
                     setSelectedMock('document-sample');
                     setContextData(JSON.stringify(mockData['document-sample'], null, 2));
-                  } else if (action.contexts?.includes('form-record')) {
+                  } else if (action.contexts?.includes('record')) {
                     setSelectedMock('form-record-sample');
                     setContextData(JSON.stringify(mockData['form-record-sample'], null, 2));
                   }

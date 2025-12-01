@@ -10,7 +10,7 @@
  */
 export type ActionContext = 
   | 'document'      // Vista de documento individual
-  | 'form-record'   // Vista de registro de formulario
+  | 'record'        // Vista de registro de formulario
   | 'form'          // Vista de formulario (lista de registros)
   | 'workspace'     // Panel del workspace
   | 'global';       // Menú global de la app
@@ -53,8 +53,8 @@ export interface ActionContextData {
     fields?: Record<string, any>;
   };
   
-  // Para context: 'form-record'
-  formRecord?: {
+  // Para context: 'record'
+  record?: {
     id: number;
     formId: number;
     workspaceId?: number;
@@ -109,6 +109,7 @@ export interface ActionDefinition {
   buttonVariant?: 'primary' | 'secondary' | 'danger';
   showInMenu?: boolean;          // Mostrar en menú contextual
   showInToolbar?: boolean;       // Mostrar en toolbar
+  target?: 'staging' | 'prod';   // Entorno donde está disponible (default: ambos)
   
   // Handler
   handler: (data: ActionContextData) => Promise<ActionResult>;

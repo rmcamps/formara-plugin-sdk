@@ -74,6 +74,8 @@ export interface FieldRenderProps {
     config: FieldConfig;
     error?: string;
     disabled?: boolean;
+    onBlur?: () => void;
+    onFocus?: () => void;
 }
 /**
  * Props para renderizar configuración en panel de propiedades
@@ -109,7 +111,7 @@ export interface FieldConfig {
     label?: string;
     description?: string;
     placeholder?: string;
-    required?: boolean;
+    required?: boolean | string;
     validation?: {
         pattern?: string;
         min?: number;
@@ -126,12 +128,27 @@ export interface FieldConfig {
     defaultValue?: any;
     /** Máscara de input (para string, number, integer) */
     input_mask?: InputMask;
-    /** Fórmula de validación (math.js, retorna boolean) */
+    /** Fórmula de validación (FSL, retorna boolean) - LEGACY, usar validations[] */
     validate?: string;
-    /** Mensaje de error personalizado para validación */
+    /** Mensaje de error personalizado para validación - LEGACY */
     validate_error?: string;
-    /** Fórmula de cálculo (math.js, hace el campo readonly) */
+    /** Validaciones múltiples (NUEVO) */
+    validations?: Array<{
+        expression: string;
+        message: string;
+    }>;
+    /** Fórmula de cálculo (FSL, hace el campo readonly) */
     calc?: string;
+    /** Condición de visibilidad (NUEVO) - Expresión FSL o boolean */
+    visible?: string | boolean;
+    /** Condición de editabilidad (NUEVO) - Expresión FSL o boolean */
+    enabled?: string | boolean;
+    /** Triggers de eventos (NUEVO) */
+    triggers?: {
+        onChange?: string;
+        onFocus?: string;
+        onBlur?: string;
+    };
     /** Configuración de relación (solo para type: 'relation') */
     relation?: RelationConfig;
     /** Permanecer en la misma línea que el campo anterior (layout) */

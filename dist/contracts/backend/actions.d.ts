@@ -7,7 +7,7 @@
 /**
  * Contextos donde puede aparecer una acción
  */
-export type ActionContext = 'document' | 'form-record' | 'form' | 'workspace' | 'global';
+export type ActionContext = 'document' | 'record' | 'form' | 'workspace' | 'global';
 /**
  * Resultado de ejecutar una acción
  */
@@ -40,7 +40,7 @@ export interface ActionContextData {
         extractedData?: any;
         fields?: Record<string, any>;
     };
-    formRecord?: {
+    record?: {
         id: number;
         formId: number;
         workspaceId?: number;
@@ -81,6 +81,7 @@ export interface ActionDefinition {
     buttonVariant?: 'primary' | 'secondary' | 'danger';
     showInMenu?: boolean;
     showInToolbar?: boolean;
+    target?: 'staging' | 'prod';
     handler: (data: ActionContextData) => Promise<ActionResult>;
 }
 /**
